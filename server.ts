@@ -80,6 +80,20 @@ async function createServer() {
     });
   });
 
+  // Weather Proxy (Reliable for domestic users)
+  app.get('/api/weather', async (req, res) => {
+    try {
+      const lat = 40.0155;
+      const lon = 116.4158;
+      const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+      const data = await weatherRes.json();
+      res.json(data);
+    } catch (err: any) {
+      console.error('Weather Proxy Error:', err);
+      res.status(500).json({ error: 'Failed to fetch weather' });
+    }
+  });
+
   // Debug route (Safe)
   app.get('/api/debug', (req, res) => {
     res.json({

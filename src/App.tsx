@@ -50,12 +50,15 @@ export default function App() {
     return () => clearInterval(timer);
   }, []);
 
-  // Fetch real weather (Open-Meteo)
+  // Fetch real weather (Via Backend Proxy for stability)
   useEffect(() => {
-    const fetchWeather = async (lat: number, lon: number) => {
+    const fetchWeather = async () => {
       try {
-        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+        // Try backend proxy first (more reliable for domestic users)
+        const res = await fetch(`${API_BASE}/weather`);
+        if (!res.ok) throw new Error('Proxy failed');
         const data = await res.json();
+        
         if (data.current_weather) {
           setWeather({
             temp: Math.round(data.current_weather.temperature),
@@ -63,18 +66,28 @@ export default function App() {
           });
         }
       } catch (e) {
-        console.error('Weather fetch failed:', e);
+        console.warn('Weather proxy failed, trying direct fallback...');
+        try {
+          // Direct fallback if proxy fails
+          const lat = 40.0155;
+          const lon = 116.4158;
+          const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+          const data = await res.json();
+          if (data.current_weather) {
+            setWeather({
+              temp: Math.round(data.current_weather.temperature),
+              condition: data.current_weather.weathercode <= 3 ? 'Sunny' : 'Cloudy'
+            });
+          }
+        } catch (err) {
+          console.error('All weather sources failed:', err);
+        }
       }
     };
 
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude),
-        () => fetchWeather(39.9042, 116.4074) // Default to Beijing
-      );
-    } else {
-      fetchWeather(39.9042, 116.4074);
-    }
+    fetchWeather();
+    const interval = setInterval(fetchWeather, 1800000);
+    return () => clearInterval(interval);
   }, []);
 
   // Fetch initial data
@@ -178,20 +191,34 @@ export default function App() {
 
   const currentDayMenu = useMemo(() => {
     if (weeklyMenu.length === 0) return null;
-    const today = currentTime.getDay(); // 0 is Sunday, 1 is Monday...
-    // Map: Mon=0, Tue=1, Wed=2, Thu=3, Fri=4, Sat/Sun=0 (default to Mon)
-    const index = (today >= 1 && today <= 5) ? today - 1 : 0;
-    return weeklyMenu[index] || weeklyMenu[0];
+    
+    // Get current day index (0-6, where 0 is Sunday)
+    const today = currentTime.getDay();
+    
+    // Map to Mon-Fri (1-5). If Sat(6) or Sun(0), default to Mon(1)
+    let targetDayIndex = today;
+    if (today === 0 || today === 6) {
+      targetDayIndex = 1; // Default to Monday for weekends
+    }
+    
+    // weeklyMenu is expected to be [Mon, Tue, Wed, Thu, Fri]
+    // So index 0 is Monday (1), index 1 is Tuesday (2), etc.
+    const menuIndex = targetDayIndex - 1;
+    
+    return weeklyMenu[menuIndex] || weeklyMenu[0];
   }, [weeklyMenu, currentTime]);
 
   const rotatedMenu = useMemo(() => {
     if (weeklyMenu.length === 0) return [];
+    
     const today = currentTime.getDay();
-    const startIndex = (today >= 1 && today <= 5) ? today - 1 : 0;
+    // Start from today if Mon-Fri, otherwise start from Mon
+    let startIndex = (today >= 1 && today <= 5) ? today - 1 : 0;
     
     const result = [];
     for (let i = 0; i < weeklyMenu.length; i++) {
-      result.push(weeklyMenu[(startIndex + i) % weeklyMenu.length]);
+      const idx = (startIndex + i) % weeklyMenu.length;
+      result.push(weeklyMenu[idx]);
     }
     return result;
   }, [weeklyMenu, currentTime]);
@@ -316,6 +343,7 @@ function HomeView({ onOpen, onShowMenu, todayMenu, canOpen, weather, time }: {
   time: Date;
 }) {
   const timeString = time.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  const dateString = time.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' });
   
   return (
     <div className="flex flex-col min-h-screen pt-24 pb-12 px-8">
@@ -324,9 +352,12 @@ function HomeView({ onOpen, onShowMenu, todayMenu, canOpen, weather, time }: {
           <MapPin className="w-4 h-4 mr-1" />
           <span>北京 · 仰山公园</span>
         </div>
-        <div className="flex items-center gap-2 text-on-surface-variant text-sm font-medium opacity-75">
-          <Sun className="w-4 h-4 text-secondary" />
-          <span>{weather.temp}°C · {weather.condition} · {timeString}</span>
+        <div className="flex flex-col items-center text-on-surface-variant text-[10px] font-medium opacity-75">
+          <div className="flex items-center gap-1">
+            <Sun className="w-3 h-3 text-secondary" />
+            <span>{weather.temp}°C · {weather.condition} · {timeString}</span>
+          </div>
+          <div className="mt-0.5">{dateString}</div>
         </div>
       </header>
 
