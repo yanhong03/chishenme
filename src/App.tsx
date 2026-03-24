@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Utensils, 
@@ -13,10 +13,19 @@ import {
   ChevronLeft, 
   Star, 
   Lightbulb, 
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  AlertCircle,
+  Database
 } from 'lucide-react';
+import { createClient } from '@supabase/supabase-js';
 import { cn } from './lib/utils';
 import { type Dish, type DayMenu } from './constants';
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://yhishsoojbucamcyolws.supabase.co';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_tPuqwof7re20oiMKBsJ8Eg_OcArX3KS';
+
+// Direct Supabase client for fallback
+const directSupabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 type View = 'home' | 'loading' | 'result' | 'menu';
 
@@ -31,35 +40,60 @@ export default function App() {
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
+  const [isDirectMode, setIsDirectMode] = useState(false);
+
   // Fetch initial data
-  const fetchData = async () => {
+  const fetchData = useCallback(async (forceDirect = false) => {
     setIsLoadingData(true);
     setFetchError(null);
     try {
-      const [menuRes, dishesRes] = await Promise.all([
-        fetch(`${API_BASE}/menu`),
-        fetch(`${API_BASE}/dishes`)
-      ]);
+      if (!forceDirect) {
+        // Try Proxy first
+        console.log('Attempting to fetch via Proxy...');
+        const [menuRes, dishesRes] = await Promise.all([
+          fetch(`${API_BASE}/menu`),
+          fetch(`${API_BASE}/dishes`)
+        ]);
 
-      if (menuRes.ok && dishesRes.ok) {
-        const menuData = await menuRes.json();
-        const dishesData = await dishesRes.json();
-        setWeeklyMenu(menuData);
-        setDishes(dishesData);
+        if (menuRes.ok && dishesRes.ok) {
+          const menuData = await menuRes.json();
+          const dishesData = await dishesRes.json();
+          setWeeklyMenu(menuData);
+          setDishes(dishesData);
+          setIsDirectMode(false);
+        } else {
+          throw new Error(`API Error: ${menuRes.status} / ${dishesRes.status}`);
+        }
       } else {
-        setFetchError(`API Error: ${menuRes.status} / ${dishesRes.status}`);
+        // Direct Supabase Fallback
+        console.log('Attempting direct Supabase connection...');
+        const [{ data: menuData, error: menuErr }, { data: dishesData, error: dishesErr }] = await Promise.all([
+          directSupabase.from('weekly_menu').select('*'),
+          directSupabase.from('dishes').select('*')
+        ]);
+
+        if (menuErr || dishesErr) throw menuErr || dishesErr;
+        
+        setWeeklyMenu(menuData || []);
+        setDishes(dishesData || []);
+        setIsDirectMode(true);
       }
     } catch (err: any) {
-      console.error('Failed to fetch data:', err);
-      setFetchError(err.message || 'Network Error');
+      console.error('Fetch Error:', err);
+      if (!forceDirect) {
+        console.warn('Proxy failed, switching to direct mode...');
+        fetchData(true); // Retry with direct mode
+      } else {
+        setFetchError(err.message || 'Network Error');
+      }
     } finally {
       setIsLoadingData(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   // Initialize daily count from localStorage
   useEffect(() => {
@@ -130,17 +164,27 @@ export default function App() {
   if (fetchError || (!currentDayMenu && view === 'home')) {
     return (
       <div className="h-screen w-full flex flex-col items-center justify-center editorial-gradient p-8 text-center">
-        <Utensils className="w-12 h-12 text-primary/20 mb-4" />
-        <h2 className="text-xl font-bold text-primary mb-2">暂时没有菜单数据</h2>
+        <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
+        <h2 className="text-xl font-bold text-primary mb-2">服务暂时不可用</h2>
         <p className="text-on-surface-variant text-sm mb-6">
           {fetchError ? `错误详情: ${fetchError}` : '请检查网络连接或稍后再试'}
         </p>
-        <button 
-          onClick={() => fetchData()}
-          className="px-8 py-3 bg-primary text-white rounded-full font-bold shadow-lg active:scale-95 transition-all"
-        >
-          重试
-        </button>
+        <div className="flex flex-col gap-3 w-full">
+          <button 
+            onClick={() => fetchData(false)}
+            className="px-8 py-3 bg-primary text-white rounded-full font-bold shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2"
+          >
+            <RefreshCw className="w-4 h-4" />
+            重试 (代理模式)
+          </button>
+          <button 
+            onClick={() => fetchData(true)}
+            className="px-8 py-3 bg-surface-container text-primary rounded-full font-bold shadow-sm active:scale-95 transition-all flex items-center justify-center gap-2"
+          >
+            <Database className="w-4 h-4" />
+            直连数据库
+          </button>
+        </div>
       </div>
     );
   }

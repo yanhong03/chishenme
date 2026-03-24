@@ -10,19 +10,21 @@ let supabase: any = null;
 
 function getSupabase() {
   if (!supabase) {
-    const url = process.env.SUPABASE_URL || 'https://yhishsoojbucamcyolws.supabase.co';
-    const key = process.env.SUPABASE_ANON_KEY || 'sb_publishable_tPuqwof7re20oiMKBsJ8Eg_OcArX3KS';
+    // Try both standard and VITE_ prefixed variables for maximum compatibility on Vercel
+    const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://yhishsoojbucamcyolws.supabase.co';
+    const key = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_tPuqwof7re20oiMKBsJ8Eg_OcArX3KS';
 
-    if (!url || !key || url.includes('TODO')) {
+    if (!url || !key || url.includes('TODO') || url.length < 10) {
       console.warn('⚠️ Supabase credentials missing or invalid. Using mock data.');
       return null;
     }
 
     try {
-      // Ensure URL is valid to prevent crash
-      new URL(url);
-      supabase = createClient(url, key);
-      console.log('✅ Supabase client initialized successfully');
+      const sanitizedUrl = url.trim();
+      const sanitizedKey = key.trim();
+      new URL(sanitizedUrl);
+      supabase = createClient(sanitizedUrl, sanitizedKey);
+      console.log('✅ Supabase client initialized with URL:', sanitizedUrl.substring(0, 20) + '...');
     } catch (e) {
       console.error('❌ Failed to initialize Supabase client:', e);
       return null;
@@ -81,9 +83,10 @@ async function createServer() {
   // Debug route (Safe)
   app.get('/api/debug', (req, res) => {
     res.json({
-      urlSet: !!process.env.SUPABASE_URL,
-      keySet: !!process.env.SUPABASE_ANON_KEY,
-      urlPrefix: process.env.SUPABASE_URL?.substring(0, 10) + '...',
+      urlSet: !!(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL),
+      keySet: !!(process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY),
+      env: process.env.NODE_ENV,
+      isVercel: !!process.env.VERCEL,
       nodeVersion: process.version
     });
   });
