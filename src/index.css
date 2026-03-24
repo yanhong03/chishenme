@@ -1,0 +1,66 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Be+Vietnam+Pro:wght@400;500;600&display=swap');
+
+@theme {
+  --font-headline: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
+
+  --color-primary: #154212;
+  --color-primary-container: #2d5a27;
+  --color-primary-fixed: #bcf0ae;
+  --color-on-primary-fixed: #002201;
+  
+  --color-secondary: #904d00;
+  --color-secondary-container: #fd8b00;
+  --color-on-secondary-container: #603100;
+  --color-secondary-fixed: #ffdcc3;
+
+  --color-surface: #f4fbf8;
+  --color-surface-bright: #f4fbf8;
+  --color-surface-dim: #d4dcd9;
+  --color-on-surface: #161d1b;
+  --color-on-surface-variant: #42493e;
+  
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #eef5f2;
+  --color-surface-container: #e8efec;
+  --color-surface-container-high: #e3eae7;
+  --color-surface-container-highest: #dde4e1;
+
+  --color-outline: #72796e;
+  --color-outline-variant: #c2c9bb;
+
+  --radius-lg: 2rem;
+  --radius-xl: 3rem;
+}
+
+@layer base {
+  body {
+    @apply bg-surface text-on-surface font-body antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@layer utilities {
+  .editorial-gradient {
+    background: radial-gradient(circle at top right, var(--color-surface-bright), var(--color-surface-container-low));
+  }
+  
+  .glass-overlay {
+    background: linear-gradient(135deg, rgba(22, 29, 27, 0.8) 0%, rgba(21, 66, 18, 0.9) 100%);
+    backdrop-filter: blur(8px);
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@keyframes spoon-bounce {
+  0%, 100% { transform: translateY(0) rotate(-10deg); }
+  50% { transform: translateY(-12px) rotate(15deg); }
+}
+
+.animate-spoon {
+  animation: spoon-bounce 1.8s ease-in-out infinite;
+}
