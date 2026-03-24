@@ -1,5 +1,4 @@
 import express from 'express';
-import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
@@ -39,8 +38,9 @@ const MOCK_DISHES = [
   { id: 4, name: '广式蜜汁叉烧饭', recommendation: 'SWEET & SAVORY', tip: '记得淋上秘制酱汁', quote: '✨ 每一口都是满满的幸福感' }
 ];
 
-async function startServer() {
-  const app = express();
+const app = express();
+
+async function createServer() {
   const PORT = 3000;
 
   app.use(cors());
@@ -110,7 +110,8 @@ async function startServer() {
   });
 
   // Vite middleware for development
-  if (process.env.NODE_ENV !== 'production') {
+  if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
@@ -124,9 +125,18 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+  return app;
+}
+
+// For local development
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+  createServer().then((app) => {
+    const PORT = 3000;
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
   });
 }
 
-startServer();
+export default app;
+export { createServer };
