@@ -41,6 +41,41 @@ export default function App() {
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   const [isDirectMode, setIsDirectMode] = useState(false);
+  const [weather, setWeather] = useState<{ temp: number; condition: string }>({ temp: 20, condition: 'Sunny' });
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Update time every minute
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Fetch real weather (Open-Meteo)
+  useEffect(() => {
+    const fetchWeather = async (lat: number, lon: number) => {
+      try {
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+        const data = await res.json();
+        if (data.current_weather) {
+          setWeather({
+            temp: Math.round(data.current_weather.temperature),
+            condition: data.current_weather.weathercode <= 3 ? 'Sunny' : 'Cloudy'
+          });
+        }
+      } catch (e) {
+        console.error('Weather fetch failed:', e);
+      }
+    };
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude),
+        () => fetchWeather(39.9042, 116.4074) // Default to Beijing
+      );
+    } else {
+      fetchWeather(39.9042, 116.4074);
+    }
+  }, []);
 
   // Fetch initial data
   const fetchData = useCallback(async (forceDirect = false) => {
@@ -143,10 +178,23 @@ export default function App() {
 
   const currentDayMenu = useMemo(() => {
     if (weeklyMenu.length === 0) return null;
-    const today = new Date().getDay(); // 0 is Sunday, 1 is Monday
-    const index = today >= 1 && today <= 5 ? today - 1 : 0;
+    const today = currentTime.getDay(); // 0 is Sunday, 1 is Monday...
+    // Map: Mon=0, Tue=1, Wed=2, Thu=3, Fri=4, Sat/Sun=0 (default to Mon)
+    const index = (today >= 1 && today <= 5) ? today - 1 : 0;
     return weeklyMenu[index] || weeklyMenu[0];
-  }, [weeklyMenu]);
+  }, [weeklyMenu, currentTime]);
+
+  const rotatedMenu = useMemo(() => {
+    if (weeklyMenu.length === 0) return [];
+    const today = currentTime.getDay();
+    const startIndex = (today >= 1 && today <= 5) ? today - 1 : 0;
+    
+    const result = [];
+    for (let i = 0; i < weeklyMenu.length; i++) {
+      result.push(weeklyMenu[(startIndex + i) % weeklyMenu.length]);
+    }
+    return result;
+  }, [weeklyMenu, currentTime]);
 
   if (isLoadingData) {
     return (
@@ -204,6 +252,8 @@ export default function App() {
               onShowMenu={() => setView('menu')} 
               todayMenu={currentDayMenu}
               canOpen={dailyCount < 2}
+              weather={weather}
+              time={currentTime}
             />
           </motion.div>
         )}
@@ -241,7 +291,7 @@ export default function App() {
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
           >
             <MenuView 
-              menu={weeklyMenu}
+              menu={rotatedMenu}
               onBack={() => setView('home')} 
             />
           </motion.div>
@@ -257,7 +307,16 @@ export default function App() {
   );
 }
 
-function HomeView({ onOpen, onShowMenu, todayMenu, canOpen }: { onOpen: () => void; onShowMenu: () => void; todayMenu: DayMenu; canOpen: boolean }) {
+function HomeView({ onOpen, onShowMenu, todayMenu, canOpen, weather, time }: { 
+  onOpen: () => void; 
+  onShowMenu: () => void; 
+  todayMenu: DayMenu; 
+  canOpen: boolean;
+  weather: { temp: number; condition: string };
+  time: Date;
+}) {
+  const timeString = time.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  
   return (
     <div className="flex flex-col min-h-screen pt-24 pb-12 px-8">
       <header className="fixed top-0 left-0 right-0 z-50 flex flex-col items-center justify-center py-4 gap-1 bg-surface/80 backdrop-blur-xl shadow-sm max-w-md mx-auto">
@@ -267,7 +326,7 @@ function HomeView({ onOpen, onShowMenu, todayMenu, canOpen }: { onOpen: () => vo
         </div>
         <div className="flex items-center gap-2 text-on-surface-variant text-sm font-medium opacity-75">
           <Sun className="w-4 h-4 text-secondary" />
-          <span>12°C/20°C · Breeze ☀️</span>
+          <span>{weather.temp}°C · {weather.condition} · {timeString}</span>
         </div>
       </header>
 
