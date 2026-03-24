@@ -6,18 +6,27 @@ import cors from 'cors';
 
 dotenv.config();
 
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://yhishsoojbucamcyolws.supabase.co';
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'sb_publishable_tPuqwof7re20oiMKBsJ8Eg_OcArX3KS';
-
 let supabase: any = null;
 
 function getSupabase() {
   if (!supabase) {
-    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-      console.warn('⚠️ SUPABASE_URL or SUPABASE_ANON_KEY is missing. Using mock data for development.');
+    const url = process.env.SUPABASE_URL || 'https://yhishsoojbucamcyolws.supabase.co';
+    const key = process.env.SUPABASE_ANON_KEY || 'sb_publishable_tPuqwof7re20oiMKBsJ8Eg_OcArX3KS';
+
+    if (!url || !key || url.includes('TODO')) {
+      console.warn('⚠️ Supabase credentials missing or invalid. Using mock data.');
       return null;
     }
-    supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    try {
+      // Ensure URL is valid to prevent crash
+      new URL(url);
+      supabase = createClient(url, key);
+      console.log('✅ Supabase client initialized successfully');
+    } catch (e) {
+      console.error('❌ Failed to initialize Supabase client:', e);
+      return null;
+    }
   }
   return supabase;
 }
@@ -38,25 +47,24 @@ const MOCK_DISHES = [
   { id: 4, name: '广式蜜汁叉烧饭', recommendation: 'SWEET & SAVORY', tip: '记得淋上秘制酱汁', quote: '✨ 每一口都是满满的幸福感' }
 ];
 
-const app = express();
-
 async function createServer() {
-  const PORT = 3000;
-
+  const app = express();
+  
   app.use(express.json());
   app.use(cors());
 
   // Supabase config check
-  console.log('Supabase Configuration Check:', {
+  console.log('Environment Check:', {
     hasUrl: !!process.env.SUPABASE_URL,
     hasKey: !!process.env.SUPABASE_ANON_KEY,
     nodeEnv: process.env.NODE_ENV,
-    isVercel: !!process.env.VERCEL
+    isVercel: !!process.env.VERCEL,
+    cwd: process.cwd()
   });
 
-  // Request logging for debugging
+  // Request logging
   app.use((req, res, next) => {
-    console.log(`${req.method} ${req.url}`);
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
     next();
   });
 
@@ -70,7 +78,16 @@ async function createServer() {
     });
   });
 
-  // API Routes - Handle both /api/path and /path for flexibility on Vercel
+  // Debug route (Safe)
+  app.get('/api/debug', (req, res) => {
+    res.json({
+      urlSet: !!process.env.SUPABASE_URL,
+      keySet: !!process.env.SUPABASE_ANON_KEY,
+      urlPrefix: process.env.SUPABASE_URL?.substring(0, 10) + '...',
+      nodeVersion: process.version
+    });
+  });
+
   const apiRouter = express.Router();
 
   apiRouter.get('/menu', async (req, res) => {
@@ -135,8 +152,17 @@ async function createServer() {
   });
 
   app.use('/api', apiRouter);
-  // Also mount at root for Vercel if the prefix is stripped
   app.use('/', apiRouter);
+
+  // Global Error Handler
+  app.use((err: any, req: any, res: any, next: any) => {
+    console.error('Unhandled Error:', err);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: err.message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+  });
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
@@ -168,5 +194,4 @@ if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
   });
 }
 
-export default app;
 export { createServer };
