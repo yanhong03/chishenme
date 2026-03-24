@@ -194,30 +194,38 @@ export default function App() {
     
     // Get current day index (0-6, where 0 is Sunday)
     const today = currentTime.getDay();
+    const dayMap = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
     
-    // Map to Mon-Fri (1-5). If Sat(6) or Sun(0), default to Mon(1)
-    let targetDayIndex = today;
+    // Map to Mon-Fri. If Sat(6) or Sun(0), default to Mon('周一')
+    let targetDayName = dayMap[today];
     if (today === 0 || today === 6) {
-      targetDayIndex = 1; // Default to Monday for weekends
+      targetDayName = '周一';
     }
     
-    // weeklyMenu is expected to be [Mon, Tue, Wed, Thu, Fri]
-    // So index 0 is Monday (1), index 1 is Tuesday (2), etc.
-    const menuIndex = targetDayIndex - 1;
-    
-    return weeklyMenu[menuIndex] || weeklyMenu[0];
+    // Find by day name in the menu array
+    const menu = weeklyMenu.find(m => m.day === targetDayName);
+    return menu || weeklyMenu[0];
   }, [weeklyMenu, currentTime]);
 
   const rotatedMenu = useMemo(() => {
     if (weeklyMenu.length === 0) return [];
     
     const today = currentTime.getDay();
+    const dayMap = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+    
     // Start from today if Mon-Fri, otherwise start from Mon
-    let startIndex = (today >= 1 && today <= 5) ? today - 1 : 0;
+    let startDayName = dayMap[today];
+    if (today === 0 || today === 6) {
+      startDayName = '周一';
+    }
+    
+    // Find the index of the start day in the weeklyMenu array
+    const startIndexInArray = weeklyMenu.findIndex(m => m.day === startDayName);
+    const safeStartIndex = startIndexInArray !== -1 ? startIndexInArray : 0;
     
     const result = [];
     for (let i = 0; i < weeklyMenu.length; i++) {
-      const idx = (startIndex + i) % weeklyMenu.length;
+      const idx = (safeStartIndex + i) % weeklyMenu.length;
       result.push(weeklyMenu[idx]);
     }
     return result;
@@ -594,7 +602,6 @@ function MenuView({ menu, onBack }: { menu: DayMenu[]; onBack: () => void }) {
           <h2 className="text-3xl font-headline font-extrabold text-primary mb-2 flex items-center justify-center gap-2">
             <CalendarIcon className="w-8 h-8" /> 本周午餐菜单
           </h2>
-          <p className="text-on-surface-variant font-medium">2026年3月23日 - 3月27日</p>
         </div>
 
         <div className="space-y-8 w-full flex flex-col items-center">

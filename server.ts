@@ -35,18 +35,24 @@ function getSupabase() {
 
 // Mock data for development when Supabase is not configured
 const MOCK_MENU = [
-  { id: 1, day: '周一', day_en: 'Monday', icon: '🥬', combo: { meat: ['红烧肉'], veg: ['蒜蓉菜心'], staple: ['五谷米饭'] }, snacks: ['1号档口：老北京炸酱面'], others: ['番茄蛋汤', '时令水果'] },
-  { id: 2, day: '周二', day_en: 'Tuesday', icon: '🍗', combo: { meat: ['宫保鸡丁'], veg: ['手撕包菜'], staple: ['香甜糯米'] }, snacks: ['2号档口：广式烧鸭粉丝汤'], others: ['排骨山药汤', '香蕉'] },
-  { id: 3, day: '周三', day_en: 'Wednesday', icon: '🥟', combo: { meat: ['粉蒸肉', '黑椒鸡块'], veg: ['干锅包菜', '酸辣土豆丝'], staple: ['米饭', '蒸馒头'] }, snacks: ['1号档口：重庆小面', '2号档口：扬州炒饭'], others: ['紫菜虾皮汤', '西瓜'] },
-  { id: 4, day: '周四', day_en: 'Thursday', icon: '🥗', combo: { meat: ['回锅肉', '红烧排骨'], veg: ['地三鲜', '蒜泥生菜'], staple: ['玉米饭', '杂粮卷'] }, snacks: ['3号档口：金汤肥牛面'], others: ['冬瓜肉丸汤', '哈密瓜'] },
-  { id: 5, day: '周五', day_en: 'Friday', icon: '🍱', combo: { meat: ['红烧鱼块'], veg: ['西红柿炒蛋'], staple: ['白米饭'] }, snacks: ['特色窗口：自助小火锅'], others: ['绿豆沙汤', '苹果'] }
+  { id: 1, day: '周一', dayEn: 'Monday', icon: '🥬', combo: { meat: ['红烧肉'], veg: ['蒜蓉菜心'], staple: ['五谷米饭'] }, snacks: ['1号档口：老北京炸酱面'], others: ['番茄蛋汤', '时令水果'] },
+  { id: 2, day: '周二', dayEn: 'Tuesday', icon: '🍗', combo: { meat: ['宫保鸡丁'], veg: ['手撕包菜'], staple: ['香甜糯米'] }, snacks: ['2号档口：广式烧鸭粉丝汤'], others: ['排骨山药汤', '香蕉'] },
+  { id: 3, day: '周三', dayEn: 'Wednesday', icon: '🥟', combo: { meat: ['粉蒸肉', '黑椒鸡块'], veg: ['干锅包菜', '酸辣土豆丝'], staple: ['米饭', '蒸馒头'] }, snacks: ['1号档口：重庆小面', '2号档口：扬州炒饭'], others: ['紫菜虾皮汤', '西瓜'] },
+  { id: 4, day: '周四', dayEn: 'Thursday', icon: '🥗', combo: { meat: ['回锅肉', '红烧排骨'], veg: ['地三鲜', '蒜泥生菜'], staple: ['玉米饭', '杂粮卷'] }, snacks: ['3号档口：金汤肥牛面'], others: ['冬瓜肉丸汤', '哈密瓜'] },
+  { id: 5, day: '周五', dayEn: 'Friday', icon: '🍱', combo: { meat: ['红烧鱼块'], veg: ['西红柿炒蛋'], staple: ['白米饭'] }, snacks: ['特色窗口：自助小火锅'], others: ['绿豆沙汤', '苹果'] }
 ];
 
 const MOCK_DISHES = [
   { id: 1, name: '水煮肉 (清真)', recommendation: 'HIGHLY RECOMMENDED', tip: '别忘了去2号档口配个小炒肉饭', quote: '🌊 吃饱了去仰山湖边消消食...' },
   { id: 2, name: '红烧狮子头', recommendation: 'CHEF\'S CHOICE', tip: '汤汁拌饭简直一绝', quote: '🌳 在绿意盎然中享受美味' },
   { id: 3, name: '老北京炸酱面', recommendation: 'LOCAL FAVORITE', tip: '多加点黄瓜丝更清爽', quote: '🍜 这一口，是地道的北京味' },
-  { id: 4, name: '广式蜜汁叉烧饭', recommendation: 'SWEET & SAVORY', tip: '记得淋上秘制酱汁', quote: '✨ 每一口都是满满的幸福感' }
+  { id: 4, name: '广式蜜汁叉烧饭', recommendation: 'SWEET & SAVORY', tip: '记得淋上秘制酱汁', quote: '✨ 每一口都是满满的幸福感' },
+  { id: 5, name: '麻婆豆腐', recommendation: 'SPICY & TENDER', tip: '豆腐滑嫩，麻辣适口，非常下饭', quote: '🌶️ 这一口，是川味的灵魂' },
+  { id: 6, name: '鱼香肉丝', recommendation: 'CLASSIC TASTE', tip: '酸甜适中，木耳清脆，肉丝鲜嫩', quote: '🥢 经典的家常味道，百吃不厌' },
+  { id: 7, name: '地三鲜', recommendation: 'VEGETARIAN DELIGHT', tip: '土豆、茄子、青椒的完美结合', quote: '🥔 大地的馈赠，朴实而美味' },
+  { id: 8, name: '糖醋里脊', recommendation: 'KIDS\' FAVORITE', tip: '外酥里嫩，酸甜可口，色泽红亮', quote: '🍭 甜蜜的味道，心情也变好了' },
+  { id: 9, name: '西红柿炒鸡蛋', recommendation: 'HOME STYLE', tip: '最简单的食材，最温馨的味道', quote: '🍳 每一个中国胃的终极慰藉' },
+  { id: 10, name: '青椒炒肉丝', recommendation: 'SIMPLE & GOOD', tip: '青椒清脆，肉丝滑嫩，咸鲜适口', quote: '🫑 简单的一餐，也是生活的滋味' }
 ];
 
 async function createServer() {
