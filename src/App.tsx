@@ -405,7 +405,7 @@ function HomeView({ onOpen, onShowMenu, todayMenu, canOpen, weather, time }: {
           <div className="h-[2px] w-8 bg-primary/10"></div>
         </div>
 
-        <div className="bg-surface-container-low rounded-lg p-6 text-center">
+        <div className="bg-surface-container-low rounded-lg p-6 text-center border border-primary/5 shadow-sm">
           <h3 className="text-primary font-bold mb-4 flex items-center justify-center gap-2">
             <span className="text-xl">🍱</span> 今日套餐
           </h3>
@@ -425,7 +425,7 @@ function HomeView({ onOpen, onShowMenu, todayMenu, canOpen, weather, time }: {
           </div>
         </div>
 
-        <div className="bg-surface-container rounded-lg p-6 text-center">
+        <div className="bg-surface-container rounded-lg p-6 text-center border border-primary/5 shadow-sm">
           <h3 className="text-primary font-bold mb-4 flex items-center justify-center gap-2">
             <span className="text-xl">🥟</span> 今日小吃
           </h3>
@@ -438,6 +438,21 @@ function HomeView({ onOpen, onShowMenu, todayMenu, canOpen, weather, time }: {
             ))}
           </ul>
         </div>
+
+        {todayMenu.others && todayMenu.others.length > 0 && (
+          <div className="bg-surface-container-high rounded-lg p-6 text-center border border-primary/5 shadow-sm">
+            <h3 className="text-primary font-bold mb-4 flex items-center justify-center gap-2">
+              <span className="text-xl">🥣</span> 今日小菜/汤/水果
+            </h3>
+            <div className="space-y-3">
+              {todayMenu.others.map((item, i) => (
+                <p key={i} className="text-on-surface font-medium">
+                  {item}
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
 
       <footer className="mt-12 w-full flex flex-col items-center gap-6">
