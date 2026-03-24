@@ -29,29 +29,35 @@ export default function App() {
   const [weeklyMenu, setWeeklyMenu] = useState<DayMenu[]>([]);
   const [dishes, setDishes] = useState<Dish[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   // Fetch initial data
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [menuRes, dishesRes] = await Promise.all([
-          fetch(`${API_BASE}/menu`),
-          fetch(`${API_BASE}/dishes`)
-        ]);
+  const fetchData = async () => {
+    setIsLoadingData(true);
+    setFetchError(null);
+    try {
+      const [menuRes, dishesRes] = await Promise.all([
+        fetch(`${API_BASE}/menu`),
+        fetch(`${API_BASE}/dishes`)
+      ]);
 
-        if (menuRes.ok && dishesRes.ok) {
-          const menuData = await menuRes.json();
-          const dishesData = await dishesRes.json();
-          setWeeklyMenu(menuData);
-          setDishes(dishesData);
-        }
-      } catch (err) {
-        console.error('Failed to fetch data:', err);
-      } finally {
-        setIsLoadingData(false);
+      if (menuRes.ok && dishesRes.ok) {
+        const menuData = await menuRes.json();
+        const dishesData = await dishesRes.json();
+        setWeeklyMenu(menuData);
+        setDishes(dishesData);
+      } else {
+        setFetchError(`API Error: ${menuRes.status} / ${dishesRes.status}`);
       }
-    };
+    } catch (err: any) {
+      console.error('Failed to fetch data:', err);
+      setFetchError(err.message || 'Network Error');
+    } finally {
+      setIsLoadingData(false);
+    }
+  };
 
+  useEffect(() => {
     fetchData();
   }, []);
 
@@ -117,6 +123,24 @@ export default function App() {
         >
           <RefreshCw className="w-8 h-8 text-primary" />
         </motion.div>
+      </div>
+    );
+  }
+
+  if (fetchError || (!currentDayMenu && view === 'home')) {
+    return (
+      <div className="h-screen w-full flex flex-col items-center justify-center editorial-gradient p-8 text-center">
+        <Utensils className="w-12 h-12 text-primary/20 mb-4" />
+        <h2 className="text-xl font-bold text-primary mb-2">暂时没有菜单数据</h2>
+        <p className="text-on-surface-variant text-sm mb-6">
+          {fetchError ? `错误详情: ${fetchError}` : '请检查网络连接或稍后再试'}
+        </p>
+        <button 
+          onClick={() => fetchData()}
+          className="px-8 py-3 bg-primary text-white rounded-full font-bold shadow-lg active:scale-95 transition-all"
+        >
+          重试
+        </button>
       </div>
     );
   }

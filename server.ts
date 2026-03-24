@@ -43,16 +43,40 @@ const app = express();
 async function createServer() {
   const PORT = 3000;
 
-  app.use(cors());
   app.use(express.json());
+  app.use(cors());
 
-  // API Routes
-  app.get('/api/menu', async (req, res) => {
+  // Supabase config check
+  console.log('Supabase Configuration Check:', {
+    hasUrl: !!process.env.SUPABASE_URL,
+    hasKey: !!process.env.SUPABASE_ANON_KEY,
+    nodeEnv: process.env.NODE_ENV,
+    isVercel: !!process.env.VERCEL
+  });
+
+  // Request logging for debugging
+  app.use((req, res, next) => {
+    console.log(`${req.method} ${req.url}`);
+    next();
+  });
+
+  // Health check
+  app.get('/api/health', (req, res) => {
+    res.json({ 
+      status: 'ok', 
+      env: process.env.NODE_ENV, 
+      vercel: !!process.env.VERCEL,
+      time: new Date().toISOString()
+    });
+  });
+
+  // API Routes - Handle both /api/path and /path for flexibility on Vercel
+  const apiRouter = express.Router();
+
+  apiRouter.get('/menu', async (req, res) => {
     try {
       const client = getSupabase();
-      if (!client) {
-        return res.json(MOCK_MENU);
-      }
+      if (!client) return res.json(MOCK_MENU);
 
       const { data, error } = await client
         .from('weekly_menu')
@@ -60,54 +84,59 @@ async function createServer() {
         .order('id', { ascending: true });
 
       if (error) throw error;
-      res.json(data);
+      
+      // Fallback to mock data if database is empty
+      const result = (data && data.length > 0) ? data : MOCK_MENU;
+      res.json(result);
     } catch (error: any) {
-      console.error('Supabase error:', error);
-      res.json(MOCK_MENU); // Fallback to mock data on error
+      console.error('Supabase menu error:', error);
+      res.json(MOCK_MENU);
     }
   });
 
-  app.get('/api/dishes', async (req, res) => {
+  apiRouter.get('/dishes', async (req, res) => {
     try {
       const client = getSupabase();
-      if (!client) {
-        return res.json(MOCK_DISHES);
-      }
+      if (!client) return res.json(MOCK_DISHES);
 
       const { data, error } = await client
         .from('dishes')
         .select('*');
 
       if (error) throw error;
-      res.json(data);
+      
+      // Fallback to mock data if database is empty
+      const result = (data && data.length > 0) ? data : MOCK_DISHES;
+      res.json(result);
     } catch (error: any) {
-      console.error('Supabase error:', error);
-      res.json(MOCK_DISHES); // Fallback to mock data on error
+      console.error('Supabase dishes error:', error);
+      res.json(MOCK_DISHES);
     }
   });
 
-  // Record an opening (for analytics or server-side tracking if needed)
-  app.post('/api/blind-box/open', async (req, res) => {
+  apiRouter.post('/blind-box/open', async (req, res) => {
     try {
       const client = getSupabase();
-      if (!client) {
-        return res.json({ success: true, mock: true });
-      }
+      if (!client) return res.json({ success: true, mock: true });
 
       const { device_id } = req.body;
       const today = new Date().toISOString().split('T')[0];
 
-      const { data, error } = await client
+      const { error } = await client
         .from('blind_box_logs')
         .insert([{ device_id, opened_at: new Date().toISOString(), date: today }]);
 
       if (error) throw error;
       res.json({ success: true });
     } catch (error: any) {
-      console.error('Supabase error:', error);
+      console.error('Supabase log error:', error);
       res.json({ success: true, mock: true });
     }
   });
+
+  app.use('/api', apiRouter);
+  // Also mount at root for Vercel if the prefix is stripped
+  app.use('/', apiRouter);
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
@@ -117,7 +146,8 @@ async function createServer() {
       appType: 'spa',
     });
     app.use(vite.middlewares);
-  } else {
+  } else if (!process.env.VERCEL) {
+    // Only serve static files if NOT on Vercel (Vercel handles static files itself)
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
